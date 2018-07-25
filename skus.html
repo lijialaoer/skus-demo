@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>skus demo</title>
+</head>
+<!-- <frameset cols="20%,*">
+	<frame src="./frame_a.html"></frame>
+	<frame src="./frame_c.html" name="showframe"></frame>
+</frameset> -->
+<style>
+	*{
+		padding:0px;
+		margin:0px;
+	}
+	.skus{
+		margin-bottom:10px;
+		width: 48px;
+		height: 23px;
+		line-height: 23px;
+		text-align: center;
+		position: relative;
+		display: inline-block;
+		vertical-align: middle;
+		border:1px solid #666;
+	}
+	input{
+		display: block;
+	}
+	.btn{
+		position: absolute;
+		top:0px;
+		left:0px;
+		width: 100%;
+		height:100%;
+		cursor: pointer;
+
+	}
+	.active{
+		background:#ccc;
+		color:red;
+	}
+	.disable{
+		background:#ccc;
+        opacity: 0.3;
+	}
+	input{
+		opacity: 0;
+	}
+</style>
+<body>
+	<!-- <iframe src="./frame_b.html"></iframe>
+	<iframe src="./frame_a.html"></iframe> -->
+	<div class="choose">
+		<!-- <div class="radios">
+			<label for="color">color:</label>
+			<div class="skus">
+				<div class="btn" data-value='red'>红色</div>
+			</div>
+		</div> -->
+	</div>
+
+	<span>你选择的组合为：</span>
+	<span class='userchoose'>无</span>
+
+	<span>商品价格为：￥</span>
+	<span class="price">0</span>
+
+</body>
+<script>
+	// var leftPos = (typeof window.screenLeft == 'number') ? window.screenLeft : window.screenX;
+	// var topPos = (typeof window.screenTop == 'number') ? window.screenTop : window.screenY;
+	// var pageWith = window.innerWidth;
+	// var pageHight = window.innerHeight;
+	// var pagesWith = window.outerWidth;
+	// var pagesHigth = window.outerHeight;
+
+	// var pagex = document.documentElement.clientWidth || document.body.clientWidth;
+	// var pagey = document.documentElement.clientHeight || document.body.clientHeight;
+	
+	// if(confirm('Are you sure?')){
+	// 	alert("I'm so glad you're sure");
+	// }else{
+	// 	alert("I'm sorry to hear you're sure")
+	// }
+	// window.print();
+	// window.find();
+	// var pp = document.getElementsByTagName('p')[0];console.log(pp)
+	// pp.onmouseenter = function(e){
+	// 	alert(e || window.event)
+	// }
+
+	// var obj={};
+	// if(obj.length>0){
+	// 	alert(1)
+	// }else{
+	// 	alert(2)
+	// }
+
+    //html
+	var data = [
+      {'price':10,skus:[{'color':'red'},{'size':2}]},
+      {'price':20,skus:[{'color':'white'},{'size':16}]},
+      {'price':15,skus:[{'color':'blue'},{'size':8},{'max':125}]},
+      {'price':25,skus:[{'color':'blue'},{'size':8},{'max':256}]}
+	];
+	var prices = document.getElementsByClassName('price')[0],
+	    uerChoose = document.getElementsByClassName('userchoose')[0];//价格和选中的组合
+	var choose = document.querySelector('.choose');
+
+	var r = skuKey(data);//数据初始化
+	var htmlData = r.results;
+	var keys = Object.keys(r.results);
+	var price=0;
+    var resChoose ={};//子集
+    creatSubSet(r.items);//创建子集
+
+    creatHtml(htmlData,choose);//创建dom
+    
+
+	 function creatHtml(data,nodes){
+	 	var str='';
+	 	for(var key in data){
+           str+=`<div class="radios" data-type='${key}'>
+			<label for="${key}">${key}:</label>`;
+		   for(var i=0,len=data[key].length; i<len; i++){
+			var radios = data[key][i];
+			str+=`<div class="skus">
+			      
+				<div class="btn" data-value='${radios}'>${radios}</div>
+			</div>`
+		  }
+		 str+='</div>';
+	   }
+       nodes.innerHTML = str;
+       
+
+       //初始化界面，匹配第一条数据
+       prices.innerText = (r.items)[0].price,uerChoose.innerText = (r.items)[0].path;
+       var init = (r.items)[0].path.split('-');
+       var initChoose = getChoose();
+       var btns = document.getElementsByClassName('btn');
+       for(var i=0,len=init.length; i<len; i++){
+          var btnItem = Array.prototype.filter.call(btns,function(ele,index){
+          	return ele.getAttribute('data-value') === init[i];
+          })[0];
+          addClass(btnItem,'active');
+          initChoose[i] = init[i];
+       }
+       updataChoose(initChoose);
+           
+	 }
+	 
+	
+	choose.addEventListener('click',function(e){
+	 	var event = e || window.event;
+	 	var target = event.target || event.srcElement;
+	 	var skus = event.path[2]; 
+	 	var types = skus.getAttribute('data-type');
+	 	var btns = document.getElementsByClassName('btn');
+	 	if(!hasClass(target,'disable')){//当点击有效选项时
+           removeClass(skus.querySelector('.active'),'active');
+	 	   addClass(target,'active');
+	 	   updataChoose(getChoose());
+	 	}else{//当点击无效选项时
+	 		var choose = getChoose();
+	 		for(var j=0,lens=btns.length; j<lens; j++){
+	 			if(hasClass(btns[j],'active')){
+	 				removeClass(btns[j],'active');
+	 			}		
+	 		}   
+          for(var i=0,len=keys.length; i<len;i++){
+          	if(keys[i] == types){
+          		choose[i] = target.getAttribute('data-value');
+          	}else{
+          		choose[i] ="";
+          	}
+          }
+           removeClass(target,'disable');
+           addClass(target,'active');  
+           updataChoose(choose)
+	 	}
+	 	       
+	 })
+
+
+	 function addClass(ele,cls){
+	 	if(!ele || !cls){
+	 		return false;
+	 	}
+	 	if(ele.className){
+	 		ele.className = ele.className + ' ' + cls;
+	 	}else{
+	 		ele.className = cls;
+	 	}
+	 	return true;
+	 }
+	 function removeClass(ele,cls){
+
+	 	if(!ele || !cls){
+	 		return false;
+	 	}
+	 	if(ele.className){
+	 		var classAttr = ele.className.split(' ');
+	 		var index = classAttr.indexOf(cls);
+	 		if(index >= 0){
+	 			classAttr.splice(index,1);
+	 			ele.className = classAttr.join(' ');
+	 			return true;
+	 		}else{
+	 			return false;
+	 		}
+	 	}else{
+	 		return false;
+	 	}
+	 }
+
+	 function hasClass(ele,cls){
+	 	if(!ele || !cls){
+	 		return false;
+	 	}
+	 	if(ele.className){
+	 		return ele.className.indexOf(cls) >-1 ? true : false;
+	 	}else{
+	 		return false;
+	 	}
+	 }
+	 function toggleClass(ele,cls){
+	 	if(!ele || !cls){
+	 		return false;
+	 	}
+	 	if(ele.className){
+          if(hasClass(ele,cls)){
+             removeClass(ele,cls)
+          }else{
+             addClass(ele.cls)
+          }
+	 	}else{
+	 		addClass(ele,cls);
+	 	}
+	 }
+	 
+
+	 //sku group ui
+	//console:{'color':['red','white','blue'],'size':[1,2,3],'max':[5,10]}
+	function skuKey(data){
+       var item = {},items=[];
+      for(var i=0,len=data.length; i<len; i++){
+      	var skus = data[i].skus,path=[];
+      	for(var j=0,skuLen=skus.length; j<skuLen; j++){
+      		var skuItem = skus[j];
+      		var keyStr = Object.keys(skuItem)[0];//得到对象的键名，并以数组形式输出
+      		if(item.hasOwnProperty(keyStr)){//hasOwnProperty() 判断对象是否包含某个属性（这里的属性只包括它自己的，不包含继承的）
+      			if(item[keyStr].indexOf(skuItem[keyStr]) == -1){
+      				(item[keyStr]).push(skuItem[keyStr]);
+      			}
+      		}else{
+      			item[keyStr] = [skuItem[keyStr]];
+      			
+      		}
+
+      		//获取路径
+      		path.push(skuItem[keyStr])
+      	}
+      	items.push({path:path.join("-"),price:data[i].price});
+      }
+     return {items:items,results:item};
+	}
+   
+  
+   function getAllKeys(arr) {
+    var path=[];
+    for(var i=0,len=arr.length; i<len; i++){
+    	path.push(arr[i].path)
+    }
+    return path;//
+  }
+  function getAllsets(arr){
+  	var ps = [[]];
+  	for(var i=0,len=arr.length; i<len; i++){
+  		for(var j=0,pslen=ps.length; j<pslen; j++){
+  			ps.push(ps[j].concat(arr[i]));
+  		}
+  	}
+  	return ps;
+  }
+
+   //组合子集
+   function creatSubSet(arr){
+   	var paths = getAllKeys(arr);
+   	for(var i=0,len=paths.length; i<len; i++){
+   		var price = arr[i].price,allKeys = getAllsets(paths[i].split('-'));
+   		for(var j=0,keylen=allKeys.length; j<keylen;j++){
+            var keys = allKeys[j].join('-');
+            if(resChoose[keys]){
+            	resChoose[keys].price.push(price);
+            }else{
+            	resChoose[keys] = {price:[price]};
+            }
+   		}
+   	}
+
+   }
+   //点击获取选择的值
+   function getChoose(){
+   	var res = []
+   	var btns = document.getElementsByClassName('radios');
+   	for(var i=0,len=btns.length; i<len; i++){
+   		var actives = btns[i].getElementsByClassName('active')[0];
+   		if(actives){
+   			res.push(actives.innerHTML);
+   		}else{
+   			res.push("")
+   		}
+   	}
+
+   	return res;
+   }
+
+   //数据更新
+   function updataChoose(selected){
+      for(var i=0,keyLen=keys.length; i<keyLen; i++){
+          var key = keys[i];
+          var data = r.results[key];
+          var copy = selected.slice();
+          for(var j=0,len=data.length; j<len; j++){
+          	var item = data[j];
+          	if(selected[i]  == item){continue}
+               copy[i] = item;//判断选中的值后还剩的路径
+               var curr = trimSymbol(copy.join('-'),'-');
+               var dls = document.getElementsByClassName('radios');
+               var index = shit(dls,'data-type',key);
+               
+               var btns = dls[index].getElementsByClassName('btn');
+               var btnIndex = shit(btns,'data-value',item);
+               
+               //如果当前路径在子集中不存在，则当前选项值变无效状态；反之，则把无效状态去掉，变为有效状态。注意不要重复添加类名
+               if(resChoose[curr]){
+               	if(hasClass(btns[btnIndex],'disable')){
+               	   removeClass(btns[btnIndex],'disable');
+               	}
+               }else{
+               	if(!hasClass(btns[btnIndex],'disable')){
+               	   addClass(btns[btnIndex],'disable');
+               	 }
+               	 
+               }
+          
+          }
+
+      }
+      //当数据更新时，调用价格的函数
+      var price = getPrice(selected);
+      if(price){
+      	prices.innerText = price.price,uerChoose.innerText = price.item;
+      }
+   }
+   //获取价格
+   function getPrice(selected){
+   	var s=[];
+   	 if(!selected[0] || !selected[1]){
+        return false;
+     }//这里判断index=0 and index=1 是否存在，实际上为 判断必选属性是否完整。可根据自己实际情况查找
+     
+     var item = trimSymbol(selected.join('-'),'-');
+      if(resChoose[item]){
+      	 return resChoose[item].price.length ==1 ? {price:resChoose[item].price[0],item} : false;
+      }else{
+      	return false;
+      }
+   }
+ 
+  //集合获取指定值的位置
+   function shit(arr,attr,key){
+   	for(var i=0,len=arr.length; i<len; i++){
+   		if(arr[i].getAttribute(attr) == key){
+   			return i;
+   		}
+   	}
+   }
+
+   //去指定符
+   function trimSymbol(str,symbol){
+   	var lefts = new RegExp("^" + symbol + '+','g'),
+   	    rights = new RegExp(symbol + '+' + '$','g'),
+   	    content = new RegExp(symbol + '+','g');
+
+   	    return str.replace(lefts,'').replace(rights,'').replace(content,symbol);
+
+   }
+
+
+  
+  
+ 
+</script>
+</html>
